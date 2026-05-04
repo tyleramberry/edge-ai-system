@@ -7,6 +7,7 @@ const BusinessAgent = require('./agents/BusinessAgent');
 const GrantAgent = require('./agents/GrantAgent');
 const ContractAgent = require('./agents/ContractAgent');
 const PersonalAgent = require('./agents/PersonalAgent');
+const { saveConversation, getHistory } = require('./utils/db');
 
 const app = express();
 app.use(cors());
@@ -21,11 +22,24 @@ orchestrator.registerAgent('personal', new PersonalAgent());
 
 // Main chat route
 app.post('/chat', async (req, res) => {
-  const { message, history = [] } = req.body;
+  const { message } = req.body;
 
   try {
+    // First classify to know which agent will handle it
+    const classification = await orchestrator.classifyTask(message);
+    const agentId = classification.agentType;
+
+    // Load conversation history for this agent from Supabase
+    const history = await getHistory(agentId);
+
+    // Route and get response
     const result = await orchestrator.routeTask(message, history);
+
+    // Save this conversation to Supabase
+    await saveConversation(agentId, message, result.reply);
+
     res.json({ success: true, ...result });
+
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
