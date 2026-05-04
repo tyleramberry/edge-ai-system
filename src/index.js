@@ -8,44 +8,54 @@ const GrantAgent = require('./agents/GrantAgent');
 const ContractAgent = require('./agents/ContractAgent');
 const PersonalAgent = require('./agents/PersonalAgent');
 const { saveConversation, getHistory } = require('./utils/db');
+const { createTask, logActivity } = require('./utils/tools');
+const { spawnSubAgent } = require('./utils/subAgent');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Set up orchestrator with all 4 agents
 const orchestrator = new Orchestrator();
 orchestrator.registerAgent('business', new BusinessAgent());
 orchestrator.registerAgent('grant', new GrantAgent());
 orchestrator.registerAgent('contract', new ContractAgent());
 orchestrator.registerAgent('personal', new PersonalAgent());
 
-// Main chat route
 app.post('/chat', async (req, res) => {
   const { message } = req.body;
-
   try {
-    // First classify to know which agent will handle it
     const classification = await orchestrator.classifyTask(message);
     const agentId = classification.agentType;
-
-    // Load conversation history for this agent from Supabase
     const history = await getHistory(agentId);
-
-    // Route and get response
     const result = await orchestrator.routeTask(message, history);
-
-    // Save this conversation to Supabase
     await saveConversation(agentId, message, result.reply);
-
+    await logActivity('chat', `${agentId} agent responded to: ${message.substring(0, 50)}`);
     res.json({ success: true, ...result });
-
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Keep the test route
+app.post('/task', async (req, res) => {
+  const { title, assignee, dueDate } = req.body;
+  try {
+    const result = await createTask(title, assignee, dueDate);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/research', async (req, res) => {
+  const { topic } = req.body;
+  try {
+    const result = await spawnSubAgent('research', topic);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.post('/test', async (req, res) => {
   const { message } = req.body;
   try {
