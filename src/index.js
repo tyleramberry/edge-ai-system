@@ -10,6 +10,7 @@ const PersonalAgent = require('./agents/PersonalAgent');
 const { saveConversation, getHistory } = require('./utils/db');
 const { createTask, logActivity } = require('./utils/tools');
 const { spawnSubAgent } = require('./utils/subAgent');
+const { checkEligibility, draftLOI, runComplianceCheck } = require('./utils/grantTools');
 
 const app = express();
 app.use(cors());
@@ -50,6 +51,36 @@ app.post('/research', async (req, res) => {
   const { topic } = req.body;
   try {
     const result = await spawnSubAgent('research', topic);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/grant/eligibility', async (req, res) => {
+  const { orgProfile, requirements } = req.body;
+  try {
+    const result = await checkEligibility(orgProfile, requirements);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/grant/draft-loi', async (req, res) => {
+  const { grantName, orgName, focus, requirements } = req.body;
+  try {
+    const result = await draftLOI(grantName, orgName, focus, requirements);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/grant/compliance', async (req, res) => {
+  const { draft, requirements } = req.body;
+  try {
+    const result = await runComplianceCheck(draft, requirements);
     res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
