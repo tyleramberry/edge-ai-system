@@ -11,6 +11,7 @@ const { saveConversation, getHistory } = require('./utils/db');
 const { createTask, logActivity } = require('./utils/tools');
 const { spawnSubAgent } = require('./utils/subAgent');
 const { checkEligibility, draftLOI, runComplianceCheck } = require('./utils/grantTools');
+const { parseRFP, buildComplianceMatrix, flagGaps } = require('./utils/contractTools');
 
 const app = express();
 app.use(cors());
@@ -81,6 +82,36 @@ app.post('/grant/compliance', async (req, res) => {
   const { draft, requirements } = req.body;
   try {
     const result = await runComplianceCheck(draft, requirements);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/contract/parse-rfp', async (req, res) => {
+  const { rfpText } = req.body;
+  try {
+    const result = await parseRFP(rfpText);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/contract/compliance-matrix', async (req, res) => {
+  const { requirements } = req.body;
+  try {
+    const result = await buildComplianceMatrix(requirements);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/contract/flag-gaps', async (req, res) => {
+  const { matrix } = req.body;
+  try {
+    const result = await flagGaps(matrix);
     res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
