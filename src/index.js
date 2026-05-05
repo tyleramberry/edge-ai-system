@@ -12,6 +12,7 @@ const { createTask, logActivity } = require('./utils/tools');
 const { spawnSubAgent } = require('./utils/subAgent');
 const { checkEligibility, draftLOI, runComplianceCheck } = require('./utils/grantTools');
 const { parseRFP, buildComplianceMatrix, flagGaps } = require('./utils/contractTools');
+const { setContext, getContext, getAllContext } = require('./utils/context');
 
 const app = express();
 app.use(cors());
@@ -24,15 +25,50 @@ orchestrator.registerAgent('contract', new ContractAgent());
 orchestrator.registerAgent('personal', new PersonalAgent());
 
 app.post('/chat', async (req, res) => {
-  const { message } = req.body;
+  const { message, projectId = 'default' } = req.body;
   try {
     const classification = await orchestrator.classifyTask(message);
     const agentId = classification.agentType;
     const history = await getHistory(agentId);
-    const result = await orchestrator.routeTask(message, history);
+    const projectContext = await getAllContext(projectId);
+    const contextSummary = projectContext.length > 0
+      ? '\n\nProject Context:\n' + projectContext.map(c => `${c.key}: ${c.value}`).join('\n')
+      : '';
+    const enrichedMessage = message + contextSummary;
+    const result = await orchestrator.routeTask(enrichedMessage, history);
     await saveConversation(agentId, message, result.reply);
     await logActivity('chat', `${agentId} agent responded to: ${message.substring(0, 50)}`);
     res.json({ success: true, ...result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/context/set', async (req, res) => {
+  const { projectId, key, value, agentId } = req.body;
+  try {
+    const result = await setContext(projectId, key, value, agentId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/context/get', async (req, res) => {
+  const { projectId, key } = req.body;
+  try {
+    const result = await getContext(projectId, key);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/context/all', async (req, res) => {
+  const { projectId } = req.body;
+  try {
+    const result = await getAllContext(projectId);
+    res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
