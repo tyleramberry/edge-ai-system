@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 
 const Orchestrator = require('./orchestrator/Orchestrator');
 const BusinessAgent = require('./agents/BusinessAgent');
@@ -18,6 +19,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Rate limiting — max 10 requests per minute per IP
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { success: false, error: 'Too many requests, please slow down.' }
+});
+app.use(limiter);
+
 const orchestrator = new Orchestrator();
 orchestrator.registerAgent('business', new BusinessAgent());
 orchestrator.registerAgent('grant', new GrantAgent());
@@ -26,6 +35,7 @@ orchestrator.registerAgent('personal', new PersonalAgent());
 
 app.post('/chat', async (req, res) => {
   const { message, projectId = 'default' } = req.body;
+  if (!message) return res.status(400).json({ success: false, error: 'Message is required' });
   try {
     const classification = await orchestrator.classifyTask(message);
     const agentId = classification.agentType;
@@ -40,12 +50,14 @@ app.post('/chat', async (req, res) => {
     await logActivity('chat', `${agentId} agent responded to: ${message.substring(0, 50)}`);
     res.json({ success: true, ...result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Chat error:', error.message);
+    res.status(500).json({ success: false, error: 'Something went wrong. Please try again.' });
   }
 });
 
 app.post('/context/set', async (req, res) => {
   const { projectId, key, value, agentId } = req.body;
+  if (!projectId || !key || !value) return res.status(400).json({ success: false, error: 'projectId, key and value are required' });
   try {
     const result = await setContext(projectId, key, value, agentId);
     res.json(result);
@@ -76,6 +88,7 @@ app.post('/context/all', async (req, res) => {
 
 app.post('/task', async (req, res) => {
   const { title, assignee, dueDate } = req.body;
+  if (!title) return res.status(400).json({ success: false, error: 'Title is required' });
   try {
     const result = await createTask(title, assignee, dueDate);
     res.json(result);
@@ -86,6 +99,7 @@ app.post('/task', async (req, res) => {
 
 app.post('/research', async (req, res) => {
   const { topic } = req.body;
+  if (!topic) return res.status(400).json({ success: false, error: 'Topic is required' });
   try {
     const result = await spawnSubAgent('research', topic);
     res.json({ success: true, result });
@@ -181,4 +195,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log('Agents registered: business, grant, contract, personal');
+  console.log('Rate limiting: 10 requests/minute per IP');
 });
