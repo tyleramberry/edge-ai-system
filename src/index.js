@@ -17,10 +17,11 @@ const { setContext, getContext, getAllContext } = require('./utils/context');
 const { getAuthUrl, getTokensFromCode } = require('./utils/googleAuth');
 const { listDriveFiles, readDriveFile, listGmailMessages, listCalendarEvents, createCalendarEvent } = require('./utils/googleTools');
 const { enrichWithGoogleContext } = require('./utils/contextEnricher');
+const { addKnowledge, getKnowledge, searchKnowledge, deleteKnowledge, listAllKnowledge } = require('./utils/knowledgeBase');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 const limiter = rateLimit({
   windowMs: 60 * 1000,
@@ -37,6 +38,7 @@ orchestrator.registerAgent('personal', new PersonalAgent());
 
 let googleTokens = null;
 
+// ── Google Auth ────────────────────────────────────────────────────────────
 app.get('/auth/google', (req, res) => {
   const url = getAuthUrl();
   res.redirect(url);
@@ -58,7 +60,6 @@ app.get('/auth/google/callback', async (req, res) => {
       </html>
     `);
   } catch (error) {
-    console.error('Auth callback error:', error.message);
     res.status(500).send('Authentication failed: ' + error.message);
   }
 });
@@ -67,6 +68,7 @@ app.get('/auth/status', (req, res) => {
   res.json({ connected: !!googleTokens });
 });
 
+// ── Google Tools ───────────────────────────────────────────────────────────
 app.get('/google/drive/files', async (req, res) => {
   if (!googleTokens) return res.status(401).json({ success: false, error: 'Google not connected.' });
   try {
@@ -118,6 +120,58 @@ app.post('/google/calendar/create', async (req, res) => {
   }
 });
 
+// ── Knowledge Base ─────────────────────────────────────────────────────────
+app.post('/knowledge/add', async (req, res) => {
+  const { agentId, title, content, tags, accessLevel } = req.body;
+  if (!agentId || !title || !content) {
+    return res.status(400).json({ success: false, error: 'agentId, title and content are required' });
+  }
+  try {
+    const result = await addKnowledge(agentId, title, content, tags, accessLevel);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/knowledge/list', async (req, res) => {
+  try {
+    const items = await listAllKnowledge();
+    res.json({ success: true, items });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/knowledge/:agentId', async (req, res) => {
+  try {
+    const items = await getKnowledge(req.params.agentId);
+    res.json({ success: true, items });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/knowledge/search', async (req, res) => {
+  const { agentId, query } = req.body;
+  try {
+    const items = await searchKnowledge(agentId, query);
+    res.json({ success: true, items });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/knowledge/:id', async (req, res) => {
+  try {
+    const result = await deleteKnowledge(req.params.id);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ── Core Chat ──────────────────────────────────────────────────────────────
 app.post('/chat', async (req, res) => {
   const { message, projectId = 'default' } = req.body;
   if (!message) return res.status(400).json({ success: false, error: 'Message is required' });
@@ -141,6 +195,7 @@ app.post('/chat', async (req, res) => {
   }
 });
 
+// ── Other Routes ───────────────────────────────────────────────────────────
 app.post('/context/set', async (req, res) => {
   const { projectId, key, value, agentId } = req.body;
   if (!projectId || !key || !value) return res.status(400).json({ success: false, error: 'projectId, key and value are required' });
@@ -282,4 +337,5 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log('Agents registered: business, grant, contract, personal');
   console.log('Google Auth: visit http://localhost:3000/auth/google to connect');
+  console.log('Knowledge Base: ready');
 });
