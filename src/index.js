@@ -14,15 +14,17 @@ const { spawnSubAgent } = require('./utils/subAgent');
 const { checkEligibility, draftLOI, runComplianceCheck } = require('./utils/grantTools');
 const { parseRFP, buildComplianceMatrix, flagGaps } = require('./utils/contractTools');
 const { setContext, getContext, getAllContext } = require('./utils/context');
+const { getAuthUrl, getTokensFromCode } = require('./utils/googleAuth');
+const { listDriveFiles, readDriveFile, listGmailMessages, listCalendarEvents, createCalendarEvent } = require('./utils/googleTools');
+const { enrichWithGoogleContext } = require('./utils/contextEnricher');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Rate limiting — max 10 requests per minute per IP
 const limiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: 20,
   message: { success: false, error: 'Too many requests, please slow down.' }
 });
 app.use(limiter);
@@ -32,6 +34,89 @@ orchestrator.registerAgent('business', new BusinessAgent());
 orchestrator.registerAgent('grant', new GrantAgent());
 orchestrator.registerAgent('contract', new ContractAgent());
 orchestrator.registerAgent('personal', new PersonalAgent());
+
+let googleTokens = null;
+
+app.get('/auth/google', (req, res) => {
+  const url = getAuthUrl();
+  res.redirect(url);
+});
+
+app.get('/auth/google/callback', async (req, res) => {
+  const { code } = req.query;
+  try {
+    const tokens = await getTokensFromCode(code);
+    googleTokens = tokens;
+    console.log('Google tokens received and stored');
+    res.send(`
+      <html>
+        <body style="font-family: Arial; padding: 40px; background: #F7F6F3;">
+          <h2 style="color: #2D4A2B;">Google Connected Successfully</h2>
+          <p>Your Google account is now connected to Edge AI for Streak Advisors.</p>
+          <p>You can close this tab and return to the app.</p>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Auth callback error:', error.message);
+    res.status(500).send('Authentication failed: ' + error.message);
+  }
+});
+
+app.get('/auth/status', (req, res) => {
+  res.json({ connected: !!googleTokens });
+});
+
+app.get('/google/drive/files', async (req, res) => {
+  if (!googleTokens) return res.status(401).json({ success: false, error: 'Google not connected.' });
+  try {
+    const files = await listDriveFiles(googleTokens, req.query.q || '');
+    res.json({ success: true, files });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/google/drive/file/:fileId', async (req, res) => {
+  if (!googleTokens) return res.status(401).json({ success: false, error: 'Google not connected.' });
+  try {
+    const content = await readDriveFile(googleTokens, req.params.fileId);
+    res.json({ success: true, content });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/google/gmail/messages', async (req, res) => {
+  if (!googleTokens) return res.status(401).json({ success: false, error: 'Google not connected.' });
+  try {
+    const messages = await listGmailMessages(googleTokens, req.query.q || '', 5);
+    res.json({ success: true, messages });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/google/calendar/events', async (req, res) => {
+  if (!googleTokens) return res.status(401).json({ success: false, error: 'Google not connected.' });
+  try {
+    const events = await listCalendarEvents(googleTokens);
+    res.json({ success: true, events });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/google/calendar/create', async (req, res) => {
+  if (!googleTokens) return res.status(401).json({ success: false, error: 'Google not connected.' });
+  const { title, startTime, endTime, description } = req.body;
+  try {
+    const event = await createCalendarEvent(googleTokens, title, startTime, endTime, description);
+    res.json({ success: true, event });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 app.post('/chat', async (req, res) => {
   const { message, projectId = 'default' } = req.body;
@@ -44,7 +129,8 @@ app.post('/chat', async (req, res) => {
     const contextSummary = projectContext.length > 0
       ? '\n\nProject Context:\n' + projectContext.map(c => `${c.key}: ${c.value}`).join('\n')
       : '';
-    const enrichedMessage = message + contextSummary;
+    const googleContext = await enrichWithGoogleContext(agentId, googleTokens);
+    const enrichedMessage = message + contextSummary + googleContext;
     const result = await orchestrator.routeTask(enrichedMessage, history);
     await saveConversation(agentId, message, result.reply);
     await logActivity('chat', `${agentId} agent responded to: ${message.substring(0, 50)}`);
@@ -195,5 +281,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log('Agents registered: business, grant, contract, personal');
-  console.log('Rate limiting: 10 requests/minute per IP');
+  console.log('Google Auth: visit http://localhost:3000/auth/google to connect');
 });
