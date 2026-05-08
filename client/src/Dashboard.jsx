@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import KnowledgeBase from './KnowledgeBase.jsx';
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_URL;
 
 // ── Design tokens (matched to colors_and_type.css) ─────────────────────────
 
@@ -487,7 +487,7 @@ function KnowledgeHeader({ onToggleSidebar }) {
           fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-500)',
           letterSpacing: '0.04em',
         }}>
-          admin · localhost:3000
+          admin · {API_BASE?.replace(/^https?:\/\//, '') || 'api'}
         </span>
         <StatusDot tone="positive" label="Live" />
       </div>
