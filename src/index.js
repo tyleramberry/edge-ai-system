@@ -14,7 +14,7 @@ const { spawnSubAgent } = require('./utils/subAgent');
 const { checkEligibility, draftLOI, runComplianceCheck } = require('./utils/grantTools');
 const { parseRFP, buildComplianceMatrix, flagGaps } = require('./utils/contractTools');
 const { setContext, getContext, getAllContext } = require('./utils/context');
-const { getAuthUrl, getTokensFromCode } = require('./utils/googleAuth');
+const { getAuthUrl, getTokensFromCode, loadTokens } = require('./utils/googleAuth');
 const { listDriveFiles, readDriveFile, listGmailMessages, listCalendarEvents, createCalendarEvent } = require('./utils/googleTools');
 const { enrichWithGoogleContext } = require('./utils/contextEnricher');
 const { addKnowledge, getKnowledge, searchKnowledge, deleteKnowledge, listAllKnowledge } = require('./utils/knowledgeBase');
@@ -37,6 +37,12 @@ orchestrator.registerAgent('contract', new ContractAgent());
 orchestrator.registerAgent('personal', new PersonalAgent());
 
 let googleTokens = null;
+
+// Load saved Google tokens on startup
+(async () => {
+  googleTokens = await loadTokens();
+  if (googleTokens) console.log('Google tokens restored from Supabase');
+})();
 
 // ── Google Auth ────────────────────────────────────────────────────────────
 app.get('/auth/google', (req, res) => {

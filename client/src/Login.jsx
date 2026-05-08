@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowRight, KeyRound } from 'lucide-react';
+import { supabase } from './supabaseClient.js';
 
 // Brand logo mark — matches logo-mark.svg from design bundle
 function LogoMark({ size = 32, bg = 'var(--ink-900)', color = 'var(--paper-100)' }) {
@@ -25,15 +26,32 @@ export default function Login({ onLogin }) {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
-  function submit(e) {
+  async function submit(e) {
     e?.preventDefault();
     setError('');
     if (!email || !password) { setError('Please enter your email and password.'); return; }
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (authError || !data?.session) {
+        setError('Invalid email or password');
+        return;
+      }
+      const u = data.session.user;
+      const meta = u.user_metadata || {};
+      onLogin({
+        id: u.id,
+        email: u.email || email,
+        name: meta.full_name || meta.name || (u.email || email).split('@')[0],
+      });
+    } catch {
+      setError('Invalid email or password');
+    } finally {
       setLoading(false);
-      onLogin({ email, name: email.split('@')[0] });
-    }, 500);
+    }
   }
 
   const inputStyle = {
