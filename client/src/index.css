@@ -82,6 +82,10 @@ input::placeholder, textarea::placeholder { color: var(--ink-400); }
   0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
   30%           { opacity: 1; transform: translateY(-4px); }
 }
+@keyframes eai-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
 
 #root { animation: fade-in 200ms ease both; }
 

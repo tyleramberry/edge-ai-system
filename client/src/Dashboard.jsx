@@ -3,7 +3,9 @@ import {
   Briefcase, FileSearch, ClipboardList, CalendarCheck,
   Folder, ChevronsUpDown, PanelLeft, LogOut,
   ArrowUp, Paperclip, Slash, CornerDownRight, ArrowUpRight, RefreshCw,
+  Database,
 } from 'lucide-react';
+import KnowledgeBase from './KnowledgeBase.jsx';
 
 const API_BASE = 'http://localhost:3000';
 
@@ -136,7 +138,7 @@ function Avatar({ name, size = 28 }) {
 
 // ── Sidebar ─────────────────────────────────────────────────────────────────
 
-function Sidebar({ currentId, onSelect, messages, user, onSignOut, projectId, onProjectChange }) {
+function Sidebar({ view, currentId, onSelect, onSelectView, messages, user, onSignOut, projectId, onProjectChange }) {
   return (
     <aside style={{
       width: 288, background: 'var(--paper-100)',
@@ -216,7 +218,7 @@ function Sidebar({ currentId, onSelect, messages, user, onSignOut, projectId, on
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {AGENTS.map(a => {
-            const isActive = currentId === a.id;
+            const isActive = view === 'agent' && currentId === a.id;
             const msgCount = messages[a.id]?.length || 0;
             return (
               <button
@@ -267,6 +269,64 @@ function Sidebar({ currentId, onSelect, messages, user, onSignOut, projectId, on
               </button>
             );
           })}
+        </div>
+
+        {/* Admin section */}
+        <div style={{
+          marginTop: 18, paddingTop: 14,
+          borderTop: '1px solid var(--ink-200)',
+        }}>
+          <div style={{
+            fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 500,
+            letterSpacing: '0.14em', textTransform: 'uppercase',
+            color: 'var(--ink-500)', marginBottom: 10,
+          }}>
+            Admin
+          </div>
+          {(() => {
+            const isActive = view === 'knowledge';
+            return (
+              <button
+                onClick={() => onSelectView('knowledge')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 10px', borderRadius: 6, border: 0,
+                  background: isActive ? '#FFF' : 'transparent',
+                  boxShadow: isActive ? 'inset 0 0 0 1px var(--ink-200)' : 'none',
+                  cursor: 'pointer', textAlign: 'left', width: '100%',
+                  transition: 'background 200ms var(--ease-standard)',
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--paper-200)'; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <div style={{
+                  width: 32, height: 32, borderRadius: 6, flexShrink: 0,
+                  background: isActive ? 'var(--bark-600)' : '#FFF',
+                  border: `1px solid ${isActive ? 'var(--bark-600)' : 'var(--ink-200)'}`,
+                  color: isActive ? 'var(--paper-50)' : 'var(--ink-700)',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 200ms var(--ease-standard)',
+                }}>
+                  <Database size={15} strokeWidth={1.5} />
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{
+                    fontFamily: 'var(--font-sans)', fontSize: 14,
+                    fontWeight: isActive ? 600 : 500, color: 'var(--ink-900)', lineHeight: 1.2,
+                  }}>
+                    Knowledge Base
+                  </div>
+                  <div style={{
+                    fontFamily: 'var(--font-sans)', fontSize: 12,
+                    color: 'var(--ink-500)', marginTop: 2,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>
+                    Retrieval index
+                  </div>
+                </div>
+              </button>
+            );
+          })()}
         </div>
       </div>
 
@@ -362,6 +422,72 @@ function AgentHeader({ agent, onToggleSidebar }) {
           letterSpacing: '0.04em',
         }}>
           claude-sonnet-4.5
+        </span>
+        <StatusDot tone="positive" label="Live" />
+      </div>
+    </header>
+  );
+}
+
+// ── Knowledge Base Header ────────────────────────────────────────────────────
+
+function KnowledgeHeader({ onToggleSidebar }) {
+  return (
+    <header style={{
+      display: 'flex', alignItems: 'center', gap: 16,
+      padding: '0 32px', borderBottom: '1px solid var(--ink-200)',
+      background: 'var(--paper-50)', minHeight: 56, flexShrink: 0,
+    }}>
+      <button
+        onClick={onToggleSidebar}
+        title="Toggle sidebar"
+        style={{
+          width: 32, height: 32, borderRadius: 4,
+          border: '1px solid transparent', background: 'transparent',
+          cursor: 'pointer',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          color: 'var(--ink-500)',
+          transition: 'border-color 200ms, color 200ms',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ink-200)'; e.currentTarget.style.color = 'var(--ink-900)'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--ink-500)'; }}
+      >
+        <PanelLeft size={16} strokeWidth={1.5} />
+      </button>
+
+      <div style={{ width: 1, height: 20, background: 'var(--ink-200)' }} />
+
+      <div style={{
+        width: 28, height: 28, borderRadius: 6,
+        background: '#FFF', border: '1px solid var(--ink-200)',
+        color: 'var(--ink-700)',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        <Database size={14} strokeWidth={1.5} />
+      </div>
+
+      <div style={{ flex: 1, display: 'flex', alignItems: 'baseline', gap: 14, minWidth: 0 }}>
+        <span style={{
+          fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 500,
+          letterSpacing: '-0.012em', color: 'var(--ink-900)',
+        }}>
+          Knowledge Base
+        </span>
+        <span style={{
+          fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--ink-500)',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          Manage the retrieval index used by every agent
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-500)',
+          letterSpacing: '0.04em',
+        }}>
+          admin · localhost:3000
         </span>
         <StatusDot tone="positive" label="Live" />
       </div>
@@ -740,6 +866,7 @@ function MessagesView({ msgs, loading }) {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export default function Dashboard({ user, onLogout }) {
+  const [view, setView]           = useState('agent'); // 'agent' | 'knowledge'
   const [activeId, setActiveId]   = useState('business');
   const [messages, setMessages]   = useState({ business: [], grant: [], contract: [], personal: [] });
   const [input, setInput]         = useState('');
@@ -817,8 +944,10 @@ export default function Dashboard({ user, onLogout }) {
     }}>
       {sidebarOpen && (
         <Sidebar
+          view={view}
           currentId={activeId}
-          onSelect={id => { setActiveId(id); }}
+          onSelect={id => { setActiveId(id); setView('agent'); }}
+          onSelectView={setView}
           messages={messages}
           user={user}
           onSignOut={onLogout}
@@ -828,23 +957,32 @@ export default function Dashboard({ user, onLogout }) {
       )}
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-        <AgentHeader
-          agent={currentAgent}
-          onToggleSidebar={() => setSidebar(o => !o)}
-        />
+        {view === 'knowledge' ? (
+          <>
+            <KnowledgeHeader onToggleSidebar={() => setSidebar(o => !o)} />
+            <KnowledgeBase />
+          </>
+        ) : (
+          <>
+            <AgentHeader
+              agent={currentAgent}
+              onToggleSidebar={() => setSidebar(o => !o)}
+            />
 
-        {showEmpty
-          ? <AgentEmptyState agent={currentAgent} onSuggest={handleSuggest} />
-          : <MessagesView msgs={currentMsgs} loading={loading} />
-        }
+            {showEmpty
+              ? <AgentEmptyState agent={currentAgent} onSuggest={handleSuggest} />
+              : <MessagesView msgs={currentMsgs} loading={loading} />
+            }
 
-        <Composer
-          agent={currentAgent}
-          value={input}
-          onChange={setInput}
-          onSend={sendMessage}
-          charCount={input.length}
-        />
+            <Composer
+              agent={currentAgent}
+              value={input}
+              onChange={setInput}
+              onSend={sendMessage}
+              charCount={input.length}
+            />
+          </>
+        )}
       </main>
     </div>
   );
