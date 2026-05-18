@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edge AI for Streak Advisors — System Summary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --ink-900: #0F0F0E;
+      --ink-800: #1F1E1C;
+      --ink-700: #38362F;
+      --ink-500: #6B6760;
+      --ink-400: #8E8980;
+      --ink-300: #B8B3A8;
+      --ink-200: #D9D4C8;
+
+      --paper-50:  #FAF7F1;
+      --paper-100: #F5F1EA;
+      --paper-200: #EDE7DB;
+      --paper-300: #E2DACA;
+
+      --bark-900: #2E1D11;
+      --bark-700: #4A2F1C;
+      --bark-600: #6B4226;
+      --bark-500: #8A5A35;
+      --bark-300: #C9A989;
+      --bark-100: #ECDDC8;
+
+      --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+      --font-sans:  'Inter Tight', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+      --font-mono:  'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+    }
+
+    html, body {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--ink-900);
+      background: var(--paper-50);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    ::selection { background: rgba(107, 66, 38, 0.18); }
+
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 48px 40px;
+      background: #fff;
+      min-height: 100vh;
+    }
+
+    /* ── Print button ── */
+    .print-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--ink-900);
+      color: var(--paper-50);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: background 150ms;
+      z-index: 100;
+    }
+    .print-btn:hover { background: var(--ink-800); }
+    .print-btn svg { flex-shrink: 0; }
+
+    /* ── Header ── */
+    .doc-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding-bottom: 28px;
+      border-bottom: 2px solid var(--ink-900);
+      margin-bottom: 36px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 6px;
+      background: var(--ink-900);
+      color: var(--paper-100);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .header-text {}
+
+    .product-name {
+      font-family: var(--font-serif);
+      font-size: 26px;
+      font-weight: 500;
+      letter-spacing: -0.018em;
+      color: var(--ink-900);
+      line-height: 1.1;
+    }
+
+    .product-subtitle {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-500);
+      margin-top: 4px;
+    }
+
+    .header-meta {
+      text-align: right;
+    }
+
+    .header-date {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-500);
+      letter-spacing: 0.04em;
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ink-700);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #1F6B3A;
+      flex-shrink: 0;
+    }
+
+    /* ── Section labels ── */
+    .section-label {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-500);
+      margin-bottom: 12px;
+    }
+
+    /* ── What Was Built ── */
+    .section-built {
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--ink-200);
+    }
+
+    .built-text {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1.65;
+      color: var(--ink-800);
+      max-width: 660px;
+    }
+
+    .built-tags {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-700);
+      background: var(--paper-100);
+      border: 1px solid var(--ink-200);
+      border-radius: 3px;
+      padding: 3px 8px;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Four Agents ── */
+    .section-agents {
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--ink-200);
+    }
+
+    .agents-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--ink-200);
+      border: 1px solid var(--ink-200);
+    }
+
+    .agent-card {
+      background: #fff;
+      padding: 16px 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .agent-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 5px;
+      background: var(--bark-600);
+      color: var(--paper-50);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .agent-info {}
+
+    .agent-name {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink-900);
+      line-height: 1.2;
+    }
+
+    .agent-desc {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--ink-500);
+      margin-top: 3px;
+      line-height: 1.45;
+    }
+
+    /* ── What It Can Do ── */
+    .section-capabilities {
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--ink-200);
+    }
+
+    .cap-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border: 1px solid var(--ink-200);
+    }
+
+    .cap-col {
+      padding: 16px 18px;
+      border-right: 1px solid var(--ink-200);
+    }
+
+    .cap-col:last-child { border-right: none; }
+
+    .cap-title {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--bark-600);
+      margin-bottom: 10px;
+    }
+
+    .cap-item {
+      font-family: var(--font-sans);
+      font-size: 12.5px;
+      color: var(--ink-700);
+      line-height: 1.5;
+      padding: 3px 0;
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+    }
+
+    .cap-item::before {
+      content: '–';
+      color: var(--ink-300);
+      flex-shrink: 0;
+    }
+
+    /* ── Live System ── */
+    .section-urls {
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--ink-200);
+    }
+
+    .url-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--paper-200);
+    }
+
+    .url-row:last-child { border-bottom: none; }
+
+    .url-label {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-500);
+      width: 110px;
+      flex-shrink: 0;
+    }
+
+    .url-value {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--bark-600);
+      text-decoration: none;
+      letter-spacing: 0.01em;
+    }
+
+    .url-value:hover { text-decoration: underline; }
+
+    /* ── Get Started ── */
+    .section-start {
+      margin-bottom: 40px;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--ink-200);
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--ink-200);
+      background: #fff;
+    }
+
+    .step:last-child { border-bottom: none; }
+
+    .step-num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--paper-50);
+      background: var(--ink-900);
+      border-radius: 3px;
+      width: 20px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-text {
+      font-family: var(--font-sans);
+      font-size: 13.5px;
+      color: var(--ink-800);
+      line-height: 1.5;
+    }
+
+    .step-text code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--bark-600);
+      background: var(--paper-100);
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid var(--ink-200);
+    }
+
+    /* ── Footer ── */
+    .doc-footer {
+      padding-top: 20px;
+      border-top: 1px solid var(--ink-200);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-brand {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-900);
+    }
+
+    .footer-contact {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-500);
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Print styles ── */
+    @media print {
+      html, body {
+        background: #fff;
+        font-size: 13px;
+      }
+
+      .page {
+        max-width: 100%;
+        padding: 32px 40px;
+        min-height: auto;
+        box-shadow: none;
+      }
+
+      .print-btn { display: none !important; }
+
+      .section-built,
+      .section-agents,
+      .section-capabilities,
+      .section-urls,
+      .section-start {
+        page-break-inside: avoid;
+      }
+
+      a { color: var(--bark-600); text-decoration: none; }
+    }
+
+    @media (max-width: 700px) {
+      .page { padding: 28px 20px; }
+      .agents-grid { grid-template-columns: 1fr; }
+      .cap-grid { grid-template-columns: 1fr; }
+      .cap-col { border-right: none; border-bottom: 1px solid var(--ink-200); }
+      .cap-col:last-child { border-bottom: none; }
+      .doc-header { flex-direction: column; gap: 16px; }
+      .header-meta { text-align: left; }
+      .print-btn { top: 12px; right: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="print-btn" onclick="window.print()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square">
+      <path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14h12v8H6z"/>
+    </svg>
+    Print / Save PDF
+  </button>
+
+  <div class="page">
+
+    <!-- Header -->
+    <header class="doc-header">
+      <div class="header-left">
+        <div class="logo-mark">
+          <!-- Edge AI logomark: geometric arrow from app codebase -->
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+            <path d="M5 6 L16 16" stroke="currentColor" stroke-width="3" stroke-linecap="square"/>
+            <path d="M5 26 L16 16" stroke="currentColor" stroke-width="3" stroke-linecap="square"/>
+            <path d="M16 16 L27 16" stroke="currentColor" stroke-width="3" stroke-linecap="square"/>
+          </svg>
+        </div>
+        <div class="header-text">
+          <div class="product-name">Edge AI for Streak Advisors</div>
+          <div class="product-subtitle">AI Agent System &mdash; System Summary</div>
+        </div>
+      </div>
+      <div class="header-meta">
+        <div class="header-date">May 2025</div>
+        <div class="header-badge">
+          <span class="status-dot"></span>
+          Live &amp; deployed
+        </div>
+      </div>
+    </header>
+
+    <!-- What Was Built -->
+    <section class="section-built">
+      <div class="section-label">What Was Built</div>
+      <p class="built-text">
+        A four-agent AI system purpose-built for Streak Advisors' grant writing and government contracting workflows. Deployed on Railway (backend) and Vercel (frontend), with agents that auto-route messages to the most relevant specialist. Connected to Google Drive, Gmail, and Google Calendar for live document access and operational workflows.
+      </p>
+      <div class="built-tags">
+        <span class="tag">Railway · backend</span>
+        <span class="tag">Vercel · frontend</span>
+        <span class="tag">Google Drive</span>
+        <span class="tag">Gmail</span>
+        <span class="tag">Google Calendar</span>
+        <span class="tag">claude-sonnet-4.5</span>
+      </div>
+    </section>
+
+    <!-- The Four Agents -->
+    <section class="section-agents">
+      <div class="section-label">The Four Agents</div>
+      <div class="agents-grid">
+
+        <div class="agent-card">
+          <div class="agent-icon">
+            <!-- Briefcase icon -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="12"/><path d="M12 12h0"/>
+            </svg>
+          </div>
+          <div class="agent-info">
+            <div class="agent-name">Business Assistant</div>
+            <div class="agent-desc">Workflow coordination and task management. Messages are automatically routed to the most relevant agent.</div>
+          </div>
+        </div>
+
+        <div class="agent-card">
+          <div class="agent-icon">
+            <!-- FileSearch icon -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><circle cx="11" cy="15" r="2"/><path d="M13.5 17.5L16 20"/>
+            </svg>
+          </div>
+          <div class="agent-info">
+            <div class="agent-name">Grant Specialist</div>
+            <div class="agent-desc">Funder research, eligibility screens, and letter-of-intent drafting against your client briefs.</div>
+          </div>
+        </div>
+
+        <div class="agent-card">
+          <div class="agent-icon">
+            <!-- ClipboardList icon -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>
+            </svg>
+          </div>
+          <div class="agent-info">
+            <div class="agent-name">Contracting Specialist</div>
+            <div class="agent-desc">RFP parsing, compliance matrices, and red-line summaries against your standard MSA.</div>
+          </div>
+        </div>
+
+        <div class="agent-card">
+          <div class="agent-icon">
+            <!-- CalendarCheck icon -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M9 16l2 2 4-4"/>
+            </svg>
+          </div>
+          <div class="agent-info">
+            <div class="agent-name">Personal Agent</div>
+            <div class="agent-desc">Scheduling, reminders, and personal correspondence — the quiet one running in the background.</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- What It Can Do -->
+    <section class="section-capabilities">
+      <div class="section-label">What It Can Do</div>
+      <div class="cap-grid">
+
+        <div class="cap-col">
+          <div class="cap-title">Grant Writing</div>
+          <div class="cap-item">LOI drafting</div>
+          <div class="cap-item">Eligibility screening</div>
+          <div class="cap-item">Funder research</div>
+          <div class="cap-item">Compliance checking</div>
+          <div class="cap-item">Grant calendar summaries</div>
+        </div>
+
+        <div class="cap-col">
+          <div class="cap-title">Gov't Contracting</div>
+          <div class="cap-item">RFP parsing</div>
+          <div class="cap-item">Compliance matrices</div>
+          <div class="cap-item">MSA gap flagging</div>
+          <div class="cap-item">Section L &amp; M summaries</div>
+          <div class="cap-item">Red-line review</div>
+        </div>
+
+        <div class="cap-col">
+          <div class="cap-title">Operations</div>
+          <div class="cap-item">Task creation</div>
+          <div class="cap-item">Email summaries</div>
+          <div class="cap-item">Document search</div>
+          <div class="cap-item">Calendar access</div>
+          <div class="cap-item">Auto message routing</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Live System -->
+    <section class="section-urls">
+      <div class="section-label">Live System</div>
+
+      <div class="url-row">
+        <span class="url-label">Frontend</span>
+        <a class="url-value" href="https://edge-ai-system.vercel.app" target="_blank">https://edge-ai-system.vercel.app</a>
+      </div>
+      <div class="url-row">
+        <span class="url-label">Backend</span>
+        <a class="url-value" href="https://edge-ai-system-production.up.railway.app" target="_blank">https://edge-ai-system-production.up.railway.app</a>
+      </div>
+      <div class="url-row">
+        <span class="url-label">Google Auth</span>
+        <a class="url-value" href="https://edge-ai-system-production.up.railway.app/auth/google" target="_blank">https://edge-ai-system-production.up.railway.app/auth/google</a>
+      </div>
+    </section>
+
+    <!-- To Get Started -->
+    <section class="section-start">
+      <div class="section-label">To Get Started</div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">Log in at <code>edge-ai-system.vercel.app</code> with your credentials.</div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">Connect Google at the backend URL <code>/auth/google</code> to enable Drive, Gmail, and Calendar access.</div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">Start chatting — agents route automatically based on your message content. No need to select an agent manually.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="doc-footer">
+      <div class="footer-brand">Built by Edge AI Solutions</div>
+      <div class="footer-contact">Tyler Amberry &nbsp;·&nbsp; tyleramberry@gmail.com</div>
+    </footer>
+
+  </div>
+
+</body>
+</html>

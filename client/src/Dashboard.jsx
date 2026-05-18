@@ -3,7 +3,7 @@ import {
   Briefcase, FileSearch, ClipboardList, CalendarCheck,
   Folder, ChevronsUpDown, PanelLeft, LogOut,
   ArrowUp, Paperclip, Slash, CornerDownRight, ArrowUpRight, RefreshCw,
-  Database,
+  Database, X, FileText,
 } from 'lucide-react';
 import KnowledgeBase from './KnowledgeBase.jsx';
 
@@ -643,6 +643,22 @@ function UserMessage({ msg }) {
       }}>
         {msg.content}
       </div>
+      {msg.file && (
+        <div style={{ marginTop: 8 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '4px 10px',
+            background: '#FFF', border: '1px solid var(--ink-200)',
+            borderRadius: 3,
+            fontFamily: 'var(--font-mono)', fontSize: 11,
+            color: 'var(--ink-700)',
+          }}>
+            <FileText size={12} strokeWidth={1.6} color="var(--ink-500)" />
+            {msg.file.name}
+            <span style={{ color: 'var(--ink-400)' }}>· PDF</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -703,8 +719,9 @@ function TypingIndicator() {
 
 // ── Composer ───────────────────────────────────────────────────────────────────
 
-function Composer({ agent, value, onChange, onSend, charCount }) {
+function Composer({ agent, value, onChange, onSend, charCount, file, onFileChange, onClearFile, loading }) {
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -717,7 +734,18 @@ function Composer({ agent, value, onChange, onSend, charCount }) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend(); }
   }
 
-  const canSend = value.trim().length > 0;
+  function openPicker() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFileSelected(e) {
+    const f = e.target.files?.[0];
+    if (f && f.type === 'application/pdf') onFileChange(f);
+    // Reset so picking the same file twice still fires onChange
+    e.target.value = '';
+  }
+
+  const canSend = !loading && (value.trim().length > 0 || !!file);
 
   return (
     <div style={{
@@ -742,12 +770,68 @@ function Composer({ agent, value, onChange, onSend, charCount }) {
             e.currentTarget.style.boxShadow = 'none';
           }}
         >
+          {file && (
+            <div style={{ marginBottom: 10 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '6px 10px',
+                background: 'var(--paper-100)',
+                border: '1px solid var(--ink-200)',
+                borderRadius: 4,
+                fontFamily: 'var(--font-sans)', fontSize: 13,
+                color: 'var(--ink-800)',
+                maxWidth: '100%',
+              }}>
+                <FileText size={13} strokeWidth={1.6} color="var(--ink-500)" />
+                <span style={{
+                  fontFamily: 'var(--font-mono)', fontSize: 12,
+                  color: 'var(--ink-800)',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  maxWidth: 360,
+                }}>
+                  {file.name}
+                </span>
+                <span style={{
+                  fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-500)',
+                }}>
+                  {(file.size / 1024).toFixed(0)} KB \u00b7 PDF
+                </span>
+                <button
+                  type="button"
+                  onClick={onClearFile}
+                  title="Remove attachment"
+                  style={{
+                    marginLeft: 4,
+                    width: 18, height: 18, borderRadius: 3,
+                    border: 0, background: 'transparent',
+                    color: 'var(--ink-500)',
+                    cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'background 200ms, color 200ms',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink-200)'; e.currentTarget.style.color = 'var(--ink-900)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--ink-500)'; }}
+                >
+                  <X size={12} strokeWidth={1.8} />
+                </button>
+              </span>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            onChange={handleFileSelected}
+            style={{ display: 'none' }}
+          />
           <textarea
             ref={textareaRef}
             value={value}
             onChange={e => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Message ${agent.name.toLowerCase()}\u2026`}
+            placeholder={file
+              ? 'Add a question, or send to use the default prompt\u2026'
+              : `Message ${agent.name.toLowerCase()}\u2026`}
             rows={2}
             style={{
               width: '100%', resize: 'none', border: 0, outline: 'none',
@@ -759,15 +843,20 @@ function Composer({ agent, value, onChange, onSend, charCount }) {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10, marginTop: 6,
           }}>
-            <button title="Attach" style={{
-              width: 30, height: 30, borderRadius: 4, border: 0,
-              background: 'transparent', cursor: 'pointer',
-              color: 'var(--ink-500)',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'color 200ms',
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = 'var(--ink-900)'}
-            onMouseLeave={e => e.currentTarget.style.color = 'var(--ink-500)'}
+            <button
+              type="button"
+              onClick={openPicker}
+              title="Attach a PDF"
+              style={{
+                width: 30, height: 30, borderRadius: 4, border: 0,
+                background: file ? 'var(--paper-200)' : 'transparent',
+                cursor: 'pointer',
+                color: file ? 'var(--bark-700)' : 'var(--ink-500)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'color 200ms, background 200ms',
+              }}
+              onMouseEnter={e => { if (!file) e.currentTarget.style.color = 'var(--ink-900)'; }}
+              onMouseLeave={e => { if (!file) e.currentTarget.style.color = 'var(--ink-500)'; }}
             >
               <Paperclip size={16} strokeWidth={1.5} />
             </button>
@@ -785,7 +874,9 @@ function Composer({ agent, value, onChange, onSend, charCount }) {
             </button>
             <span style={{ flex: 1 }} />
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--ink-500)' }}>
-              Auto-routed to the most relevant agent
+              {file
+                ? 'PDF attached — parsing may take a moment'
+                : 'Auto-routed to the most relevant agent'}
             </span>
             <button
               onClick={onSend}
@@ -870,10 +961,13 @@ export default function Dashboard({ user, onLogout }) {
   const [activeId, setActiveId]   = useState('business');
   const [messages, setMessages]   = useState({ business: [], grant: [], contract: [], personal: [] });
   const [input, setInput]         = useState('');
+  const [attachedFile, setAttachedFile] = useState(null);
   const [loading, setLoading]     = useState(false);
   const [projectId, setProjectId] = useState('project-001');
   const [sidebarOpen, setSidebar] = useState(true);
   const inputRef                  = useRef(null);
+
+  const DEFAULT_PDF_PROMPT = 'Please analyze this document and provide a comprehensive summary.';
 
   const currentAgent = AGENTS.find(a => a.id === activeId);
   const currentMsgs  = messages[activeId] || [];
@@ -889,31 +983,69 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   async function sendMessage() {
-    const text = input.trim();
-    if (!text || loading) return;
+    if (loading) return;
+
+    const rawText = input.trim();
+    const hasFile = !!attachedFile;
+    if (!rawText && !hasFile) return;
+
+    const text = rawText || (hasFile ? DEFAULT_PDF_PROMPT : '');
+
+    const fileMeta = hasFile
+      ? { name: attachedFile.name, size: attachedFile.size, type: attachedFile.type }
+      : null;
 
     setMessages(prev => ({
       ...prev,
-      [activeId]: [...prev[activeId], { role: 'user', content: text, time: getTime() }],
+      [activeId]: [
+        ...prev[activeId],
+        { role: 'user', content: text, time: getTime(), file: fileMeta },
+      ],
     }));
+
+    const sendingFile = attachedFile;
     setInput('');
+    setAttachedFile(null);
     setLoading(true);
 
     try {
-      const res  = await fetch(`${API_BASE}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, projectId }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Request failed');
+      let data;
+      if (sendingFile) {
+        const form = new FormData();
+        form.append('file', sendingFile);
+        form.append('message', text);
+        form.append('agentType', activeId);
+        form.append('projectId', projectId);
 
-      const respondingId = data.agent || activeId;
+        const res = await fetch(`${API_BASE}/upload/pdf`, {
+          method: 'POST',
+          body: form,
+        });
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '');
+          throw new Error(errText || `Request failed (${res.status})`);
+        }
+        data = await res.json();
+      } else {
+        const res  = await fetch(`${API_BASE}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, projectId }),
+        });
+        data = await res.json();
+      }
+
+      if (data && data.success === false) {
+        throw new Error(data.error || 'Request failed');
+      }
+
+      const respondingId = (data && data.agent) || activeId;
+      const reply        = (data && (data.reply ?? data.message ?? data.response)) || '';
       setMessages(prev => ({
         ...prev,
         [respondingId]: [
           ...prev[respondingId],
-          { role: 'assistant', content: data.reply, agent: respondingId, reason: data.reason, time: getTime() },
+          { role: 'assistant', content: reply, agent: respondingId, reason: data?.reason, time: getTime() },
         ],
       }));
       if (respondingId !== activeId) setActiveId(respondingId);
@@ -980,6 +1112,10 @@ export default function Dashboard({ user, onLogout }) {
               onChange={setInput}
               onSend={sendMessage}
               charCount={input.length}
+              file={attachedFile}
+              onFileChange={setAttachedFile}
+              onClearFile={() => setAttachedFile(null)}
+              loading={loading}
             />
           </>
         )}

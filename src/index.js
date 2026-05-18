@@ -18,6 +18,9 @@ const { getAuthUrl, getTokensFromCode, loadTokens } = require('./utils/googleAut
 const { listDriveFiles, readDriveFile, listGmailMessages, listCalendarEvents, createCalendarEvent } = require('./utils/googleTools');
 const { enrichWithGoogleContext } = require('./utils/contextEnricher');
 const { addKnowledge, getKnowledge, searchKnowledge, deleteKnowledge, listAllKnowledge } = require('./utils/knowledgeBase');
+const multer = require('multer');
+const { extractTextFromPDF } = require('./utils/pdfParser');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const app = express();
 app.use(cors({
@@ -351,4 +354,28 @@ app.listen(PORT, () => {
   console.log('Agents registered: business, grant, contract, personal');
   console.log('Google Auth: visit http://localhost:3000/auth/google to connect');
   console.log('Knowledge Base: ready');
+});
+
+
+app.post('/upload/pdf', upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+  try {
+    const result = await extractTextFromPDF(req.file.buffer);
+    if (!result.success) return res.status(500).json({ success: false, error: result.error });
+
+    const agentType = req.body.agentType || 'grant';
+    const message = req.body.message || 'Please analyze this document and provide a comprehensive summary.';
+    const projectId = req.body.projectId || 'default';
+
+    const prompt = message + '\n\nDocument Content:\n' + result.text.substring(0, 50000);
+    const agent = orchestrator.agents[agentType] || orchestrator.agents['grant'];
+    const history = await getHistory(agentType);
+    const reply = await agent.process(prompt, history);
+    await saveConversation(agentType, message, reply);
+
+    res.json({ success: true, agent: agentType, pages: result.pages, reply });
+  } catch (error) {
+    console.error('Upload error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
